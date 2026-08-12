@@ -157,21 +157,29 @@ async function codigoDetectado(decodedText) {
 
 
   try {
-
-    await html5QrCode.pause(true);
-
-  } catch (e) {}
+  await html5QrCode.pause(true);
+} catch (e) {}
 
 
-  document.getElementById("estado").innerText =
-    "Pase detectado";
+// Ocultar completamente la cámara pausada
+document.getElementById("reader").style.display = "none";
+
+document.getElementById("estado").innerText =
+  "Pase detectado";
 
 
-  const frame =
-    document.getElementById("checkinFrame");
+const frame =
+  document.getElementById("checkinFrame");
 
-  frame.src = decodedText;
-  frame.style.display = "block";
+frame.src = decodedText;
+frame.style.display = "block";
+
+
+// Llevar automáticamente a la ficha
+frame.scrollIntoView({
+  behavior: "smooth",
+  block: "start"
+});
 }
 
 
@@ -193,10 +201,11 @@ window.addEventListener(
 
 async function siguienteInvitado() {
 
-  document.getElementById("checkinFrame").style.display =
-    "none";
+  const frame =
+    document.getElementById("checkinFrame");
 
-  document.getElementById("checkinFrame").src = "";
+  frame.style.display = "none";
+  frame.src = "";
 
   ultimoCodigo = "";
 
@@ -204,13 +213,22 @@ async function siguienteInvitado() {
     "Escanea el siguiente pase";
 
 
+  // Volver a mostrar la cámara
+  document.getElementById("reader").style.display = "block";
+
+
   try {
-
     html5QrCode.resume();
-
   } catch (e) {
     console.error(e);
   }
+
+
+  // Regresar automáticamente a la cámara
+  document.getElementById("reader").scrollIntoView({
+    behavior: "smooth",
+    block: "center"
+  });
 }
 
 </script>
