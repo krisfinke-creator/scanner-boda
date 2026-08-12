@@ -46,7 +46,7 @@
       font-size: 16px;
       margin: 10px;
     }
-    #claveScanner {
+    #clave {
   width: 90%;
   max-width: 350px;
   box-sizing: border-box;
@@ -93,22 +93,33 @@
 const html5QrCode = new Html5Qrcode("reader");
 
 let scannerActivo = false;
+let scannerIniciando = false;
 let ultimoCodigo = "";
 let ultimoEscaneo = 0;
 
 
 async function iniciarScanner() {
 
-  if (scannerActivo) return;
+  // Evitar iniciar la cámara dos veces
+  if (scannerActivo || scannerIniciando) {
+    return;
+  }
+
+  scannerIniciando = true;
 
   try {
 
     await html5QrCode.start(
+
       { facingMode: "environment" },
 
       {
         fps: 10,
-        qrbox: function(viewfinderWidth, viewfinderHeight) {
+
+        qrbox: function(
+          viewfinderWidth,
+          viewfinderHeight
+        ) {
 
           const lado =
             Math.floor(
@@ -128,25 +139,29 @@ async function iniciarScanner() {
       codigoDetectado,
 
       function(error) {
-        // Ignorar intentos donde no encuentra QR
+        // Ignorar cuando simplemente no encuentra un QR
       }
     );
 
+
     scannerActivo = true;
+    scannerIniciando = false;
 
     document.getElementById("estado").innerText =
       "Escanea un pase";
 
-    document.getElementById("btnIniciar").style.display =
-      "none";
-
 
   } catch (error) {
 
-    document.getElementById("estado").innerText =
-      "No se pudo abrir la cámara.";
+    scannerIniciando = false;
 
-    console.error(error);
+    console.error("Error al iniciar cámara:", error);
+
+    // Solo mostrar error si realmente NO quedó activa
+    if (!scannerActivo) {
+      document.getElementById("estado").innerText =
+        "No se pudo abrir la cámara.";
+    }
   }
 }
 
