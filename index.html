@@ -46,18 +46,39 @@
       font-size: 16px;
       margin: 10px;
     }
+    #claveScanner {
+  width: 90%;
+  max-width: 350px;
+  box-sizing: border-box;
+  padding: 12px;
+  font-size: 16px;
+  margin: 8px;
+}
   </style>
 </head>
 
 <body>
 
 <header>
-  <h2>Check-in</h2>
-  <div id="estado">Presiona iniciar cámara</div>
+ <h2>Check-in</h2>
 
-  <button id="btnIniciar" onclick="iniciarScanner()">
-    Iniciar cámara
+<div id="configScanner">
+
+  <input
+    type="password"
+    id="claveScanner"
+    placeholder="Clave de recepción"
+  >
+
+  <button onclick="guardarClaveEIniciar()">
+    Iniciar check-in
   </button>
+
+</div>
+
+<div id="estado">
+  Ingresa la clave para comenzar
+</div>
 </header>
 
 <div id="reader"></div>
@@ -173,6 +194,19 @@ const frame =
 
 frame.src = decodedText;
 frame.style.display = "block";
+  frame.onload = function() {
+
+  const claveGuardada =
+    localStorage.getItem("claveCheckin") || "";
+
+  frame.contentWindow.postMessage(
+    {
+      tipo: "claveCheckin",
+      clave: claveGuardada
+    },
+    "*"
+  );
+};
 
 
 // Llevar automáticamente a la ficha
@@ -230,7 +264,45 @@ async function siguienteInvitado() {
     block: "center"
   });
 }
+function guardarClaveEIniciar() {
 
+  const clave =
+    document.getElementById("claveScanner").value.trim();
+
+  if (!clave) {
+
+    document.getElementById("estado").innerText =
+      "Ingresa la clave de recepción.";
+
+    return;
+  }
+
+  localStorage.setItem(
+    "claveCheckin",
+    clave
+  );
+
+  document.getElementById("configScanner").style.display =
+    "none";
+
+  iniciarScanner();
+}
+window.addEventListener("load", function() {
+
+  const claveGuardada =
+    localStorage.getItem("claveCheckin");
+
+  if (claveGuardada) {
+
+    document.getElementById("claveScanner").value =
+      claveGuardada;
+
+    document.getElementById("configScanner").style.display =
+      "none";
+
+    iniciarScanner();
+  }
+});  
 </script>
 
 </body>
