@@ -580,16 +580,6 @@ function guardarClaveEIniciar() {
   );
 }
 
-  localStorage.setItem(
-    "claveCheckin",
-    clave
-  );
-
-  document.getElementById("configScanner").style.display =
-    "none";
-
-  iniciarScanner();
-}
 window.addEventListener(
   "load",
   function() {
