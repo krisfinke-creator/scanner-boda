@@ -88,16 +88,81 @@
   allow="camera"
 ></iframe>
 
+  <iframe
+  id="validadorFrame"
+  style="display:none;"
+></iframe>
+  
 <script>
 
 const html5QrCode = new Html5Qrcode("reader");
 
+  const parametros =
+  new URLSearchParams(
+    window.location.search
+  );
+
+
+const EVENT_ID =
+  String(
+    parametros.get("evento") || ""
+  )
+  .trim()
+  .toLowerCase();
+  
+const BACKEND_URL =
+  "https://script.google.com/macros/s/AKfycbyzwIpnXnv40EomJw9gTrhf9Q4Csq8ij4Pb5nrXuC6M6sfDuIeMLh1tI_TgKam5_RWo/exec";
+  if (!EVENT_ID) {
+
+  document
+    .getElementById("estado")
+    .innerText =
+    "No se indicó el evento.";
+}
+  
 let scannerActivo = false;
 let scannerIniciando = false;
 let ultimoCodigo = "";
 let ultimoEscaneo = 0;
+let validadorListo = false;
+
+let clavePendienteValidacion = "";
+
+const CLAVE_STORAGE =
+  "claveCheckin_" + EVENT_ID;
+const validadorFrame =
+  document.getElementById(
+    "validadorFrame"
+  );
 
 
+validadorFrame.onload =
+  function() {
+
+    validadorListo = true;
+
+
+    if (
+      clavePendienteValidacion
+    ) {
+
+      enviarClaveParaValidar();
+    }
+  };
+
+
+if (EVENT_ID) {
+
+  validadorFrame.src =
+    BACKEND_URL +
+    "?modo=checkin" +
+    "&evento=" +
+    encodeURIComponent(
+      EVENT_ID
+    );
+}
+  
+  
 async function iniciarScanner() {
 
   // Evitar iniciar la cámara dos veces
@@ -190,7 +255,49 @@ async function codigoDetectado(decodedText) {
 
     return;
   }
+let urlQR;
 
+
+try {
+
+  urlQR =
+    new URL(
+      decodedText
+    );
+
+} catch (error) {
+
+  document
+    .getElementById("estado")
+    .innerText =
+    "El código QR no es válido.";
+
+  return;
+}
+
+
+const eventoQR =
+  String(
+    urlQR.searchParams.get(
+      "evento"
+    ) || ""
+  )
+  .trim()
+  .toLowerCase();
+
+
+if (
+  !eventoQR ||
+  eventoQR !== EVENT_ID
+) {
+
+  document
+    .getElementById("estado")
+    .innerText =
+    "Este pase pertenece a otro evento.";
+
+  return;
+}
 
   try {
   await html5QrCode.pause(true);
@@ -211,8 +318,10 @@ frame.src = decodedText;
 frame.style.display = "block";
   frame.onload = function() {
 
-  const claveGuardada =
-    localStorage.getItem("claveCheckin") || "";
+const claveGuardada =
+  localStorage.getItem(
+    CLAVE_STORAGE
+  ) || "";
 
   frame.contentWindow.postMessage(
     {
@@ -236,14 +345,110 @@ window.addEventListener(
   "message",
   function(event) {
 
+    /*
+      Entrada terminada.
+      Volver al scanner.
+    */
+
     if (
       event.data &&
-      event.data.tipo === "checkinCompleto"
+      event.data.tipo ===
+      "checkinCompleto"
     ) {
 
       siguienteInvitado();
 
+      return;
     }
+
+
+    /*
+      Resultado de validar
+      contraseña.
+    */
+
+    if (
+      event.data &&
+      event.data.tipo ===
+      "resultadoClaveScanner"
+    ) {
+
+      if (
+        event.data.valida
+      ) {
+
+        const claveValida =
+          clavePendienteValidacion;
+
+
+        localStorage.setItem(
+          CLAVE_STORAGE,
+          claveValida
+        );
+
+
+        clavePendienteValidacion =
+          "";
+
+
+        document
+          .getElementById(
+            "configScanner"
+          )
+          .style.display =
+          "none";
+
+
+        document
+          .getElementById(
+            "estado"
+          )
+          .innerText =
+          "Contraseña correcta. Iniciando cámara...";
+
+
+        iniciarScanner();
+
+
+      } else {
+
+        localStorage.removeItem(
+          CLAVE_STORAGE
+        );
+
+
+        clavePendienteValidacion =
+          "";
+
+
+        document
+          .getElementById(
+            "configScanner"
+          )
+          .style.display =
+          "block";
+
+
+        const campo =
+          document.getElementById(
+            "claveScanner"
+          );
+
+
+        campo.value = "";
+
+        campo.focus();
+
+
+        document
+          .getElementById(
+            "estado"
+          )
+          .innerText =
+          "Contraseña incorrecta. Inténtalo de nuevo.";
+      }
+    }
+
   }
 );
 
@@ -279,18 +484,101 @@ async function siguienteInvitado() {
     block: "center"
   });
 }
-function guardarClaveEIniciar() {
 
-  const clave =
-    document.getElementById("claveScanner").value.trim();
+  function validarClaveScanner(
+  clave
+) {
 
-  if (!clave) {
+  clavePendienteValidacion =
+    String(
+      clave || ""
+    ).trim();
 
-    document.getElementById("estado").innerText =
-      "Ingresa la clave de recepción.";
+
+  document
+    .getElementById(
+      "estado"
+    )
+    .innerText =
+    "Verificando contraseña...";
+
+
+  if (
+    validadorListo
+  ) {
+
+    enviarClaveParaValidar();
+  }
+}
+
+
+
+function enviarClaveParaValidar() {
+
+  if (
+    !validadorListo ||
+    !clavePendienteValidacion
+  ) {
 
     return;
   }
+
+
+  validadorFrame
+    .contentWindow
+    .postMessage(
+      {
+        tipo:
+          "validarClaveScanner",
+
+        clave:
+          clavePendienteValidacion
+      },
+      "*"
+    );
+}
+  
+function guardarClaveEIniciar() {
+
+  const clave =
+    document
+      .getElementById(
+        "claveScanner"
+      )
+      .value
+      .trim();
+
+
+  if (!EVENT_ID) {
+
+    document
+      .getElementById(
+        "estado"
+      )
+      .innerText =
+      "No se indicó el evento.";
+
+    return;
+  }
+
+
+  if (!clave) {
+
+    document
+      .getElementById(
+        "estado"
+      )
+      .innerText =
+      "Ingresa la contraseña de recepción.";
+
+    return;
+  }
+
+
+  validarClaveScanner(
+    clave
+  );
+}
 
   localStorage.setItem(
     "claveCheckin",
@@ -302,22 +590,61 @@ function guardarClaveEIniciar() {
 
   iniciarScanner();
 }
-window.addEventListener("load", function() {
+window.addEventListener(
+  "load",
+  function() {
 
-  const claveGuardada =
-    localStorage.getItem("claveCheckin");
+    if (!EVENT_ID) {
 
-  if (claveGuardada) {
+      document
+        .getElementById(
+          "configScanner"
+        )
+        .style.display =
+        "none";
 
-    document.getElementById("claveScanner").value =
-      claveGuardada;
 
-    document.getElementById("configScanner").style.display =
-      "none";
+      document
+        .getElementById(
+          "estado"
+        )
+        .innerText =
+        "No se indicó el evento.";
 
-    iniciarScanner();
+      return;
+    }
+
+
+    const claveGuardada =
+      localStorage.getItem(
+        CLAVE_STORAGE
+      );
+
+
+    if (
+      claveGuardada
+    ) {
+
+      document
+        .getElementById(
+          "claveScanner"
+        )
+        .value =
+        claveGuardada;
+
+
+      /*
+        Aunque esté guardada,
+        volver a comprobarla.
+      */
+
+      validarClaveScanner(
+        claveGuardada
+      );
+    }
+
   }
-});  
+); 
 </script>
 
 </body>
