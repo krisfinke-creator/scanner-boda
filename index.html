@@ -154,8 +154,11 @@ let ultimoCodigo = "";
 let ultimoEscaneo = 0;
 let clavePendienteValidacion = "";
 
-const CLAVE_STORAGE =
-  "claveCheckin_" + EVENT_ID;
+const SESION_STORAGE =
+  "sesionCheckin_" + EVENT_ID;
+
+const EXPIRA_STORAGE =
+  "sesionCheckinExpira_" + EVENT_ID;
   
   
 async function iniciarScanner() {
@@ -307,10 +310,56 @@ document.getElementById("estado").innerText =
 
 
 const frame =
-  document.getElementById("checkinFrame");
+  document.getElementById(
+    "checkinFrame"
+  );
 
-frame.src = decodedText;
-frame.style.display = "block";
+
+const sesion =
+  localStorage.getItem(
+    SESION_STORAGE
+  ) || "";
+
+
+if (!sesion) {
+
+  document
+    .getElementById("estado")
+    .innerText =
+    "La sesión de recepción terminó. Ingresa nuevamente la contraseña.";
+
+
+  document
+    .getElementById(
+      "configScanner"
+    )
+    .style.display =
+    "block";
+
+
+  return;
+}
+
+
+const urlPase =
+  new URL(
+    decodedText
+  );
+
+
+urlPase.searchParams.set(
+  "sesion",
+  sesion
+);
+
+
+frame.src =
+  urlPase.toString();
+
+
+frame.style.display =
+  "block";
+  
   frame.onload = function() {
 
 const claveGuardada =
@@ -335,55 +384,143 @@ frame.scrollIntoView({
 });
 }
 
-
 window.addEventListener(
-  "message",
-  function(event) {
+  "load",
+  function() {
+
+    if (!EVENT_ID) {
+
+      document
+        .getElementById(
+          "configScanner"
+        )
+        .style.display =
+        "none";
+
+
+      document
+        .getElementById(
+          "estado"
+        )
+        .innerText =
+        "No se indicó el evento.";
+
+      return;
+    }
+
+
+    const sesion =
+      localStorage.getItem(
+        SESION_STORAGE
+      );
+
+
+    const expira =
+      Number(
+        localStorage.getItem(
+          EXPIRA_STORAGE
+        ) || 0
+      );
+
 
     /*
-      Entrada terminada.
-      Volver al scanner.
+      Sesión todavía vigente.
     */
 
     if (
-      event.data &&
-      event.data.tipo ===
-      "checkinCompleto"
+      sesion &&
+      expira > Date.now()
     ) {
 
-      siguienteInvitado();
+      document
+        .getElementById(
+          "configScanner"
+        )
+        .style.display =
+        "none";
+
+
+      iniciarScanner();
 
       return;
     }
 
 
     /*
-      Resultado de validar
-      contraseña.
+      Sesión vencida o inexistente.
     */
 
-    if (
-      event.data &&
-      event.data.tipo ===
-      "resultadoClaveScanner"
-    ) {
-
-      if (
-        event.data.valida
-      ) {
-
-        const claveValida =
-          clavePendienteValidacion;
+    localStorage.removeItem(
+      SESION_STORAGE
+    );
 
 
-        localStorage.setItem(
-          CLAVE_STORAGE,
-          claveValida
-        );
+    localStorage.removeItem(
+      EXPIRA_STORAGE
+    );
 
 
-        clavePendienteValidacion =
-          "";
+    document
+      .getElementById(
+        "configScanner"
+      )
+      .style.display =
+      "block";
+
+
+    document
+      .getElementById(
+        "estado"
+      )
+      .innerText =
+      "Ingresa la clave para comenzar.";
+  }
+);
+
+const expiraSesion =
+  Number(
+    event.data.expira || 0
+  );
+
+
+if (
+  !tokenSesion ||
+  !expiraSesion
+) {
+
+  document
+    .getElementById("estado")
+    .innerText =
+    "No se pudo crear la sesión de recepción.";
+
+  return;
+}
+
+
+localStorage.setItem(
+  SESION_STORAGE,
+  tokenSesion
+);
+
+
+localStorage.setItem(
+  EXPIRA_STORAGE,
+  String(expiraSesion)
+);
+
+
+clavePendienteValidacion = "";
+
+
+/*
+  Limpiar cualquier contraseña
+  antigua que hubiera quedado
+  de versiones anteriores.
+*/
+
+localStorage.removeItem(
+  "claveCheckin_" + EVENT_ID
+);
 
 
         document
