@@ -88,10 +88,38 @@
   allow="camera"
 ></iframe>
 
-  <iframe
+<iframe
   id="validadorFrame"
+  name="validadorFrame"
   style="display:none;"
 ></iframe>
+
+<form
+  id="formValidador"
+  method="post"
+  target="validadorFrame"
+  style="display:none;"
+>
+
+  <input
+    type="hidden"
+    name="accion"
+    value="validarClaveCheckin"
+  >
+
+  <input
+    type="hidden"
+    name="evento"
+    id="eventoValidador"
+  >
+
+  <input
+    type="hidden"
+    name="clave"
+    id="claveValidador"
+  >
+
+</form>
   
 <script>
 
@@ -124,43 +152,10 @@ let scannerActivo = false;
 let scannerIniciando = false;
 let ultimoCodigo = "";
 let ultimoEscaneo = 0;
-let validadorListo = false;
-
 let clavePendienteValidacion = "";
 
 const CLAVE_STORAGE =
   "claveCheckin_" + EVENT_ID;
-const validadorFrame =
-  document.getElementById(
-    "validadorFrame"
-  );
-
-
-validadorFrame.onload =
-  function() {
-
-    validadorListo = true;
-
-
-    if (
-      clavePendienteValidacion
-    ) {
-
-      enviarClaveParaValidar();
-    }
-  };
-
-
-if (EVENT_ID) {
-
-  validadorFrame.src =
-    BACKEND_URL +
-    "?modo=checkin" +
-    "&evento=" +
-    encodeURIComponent(
-      EVENT_ID
-    );
-}
   
   
 async function iniciarScanner() {
@@ -485,7 +480,7 @@ async function siguienteInvitado() {
   });
 }
 
-  function validarClaveScanner(
+function validarClaveScanner(
   clave
 ) {
 
@@ -504,38 +499,47 @@ async function siguienteInvitado() {
 
 
   if (
-    validadorListo
-  ) {
-
-    enviarClaveParaValidar();
-  }
-}
-
-
-
-function enviarClaveParaValidar() {
-
-  if (
-    !validadorListo ||
     !clavePendienteValidacion
   ) {
+
+    document
+      .getElementById(
+        "estado"
+      )
+      .innerText =
+      "Ingresa la contraseña de recepción.";
 
     return;
   }
 
 
-  validadorFrame
-    .contentWindow
-    .postMessage(
-      {
-        tipo:
-          "validarClaveScanner",
-
-        clave:
-          clavePendienteValidacion
-      },
-      "*"
+  const formulario =
+    document.getElementById(
+      "formValidador"
     );
+
+
+  formulario.action =
+    BACKEND_URL;
+
+
+  document
+    .getElementById(
+      "eventoValidador"
+    )
+    .value =
+    EVENT_ID;
+
+
+  document
+    .getElementById(
+      "claveValidador"
+    )
+    .value =
+    clavePendienteValidacion;
+
+
+  formulario.submit();
 }
   
 function guardarClaveEIniciar() {
