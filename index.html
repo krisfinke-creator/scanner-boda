@@ -18,6 +18,18 @@
 <body>
 <header>
   <h2>Check-in</h2>
+  <div
+  id="infoEvento"
+  style="display:none;"
+>
+
+  <h3 id="nombreEvento"></h3>
+
+  <div id="fechaEvento"></div>
+
+  <div id="lugarEvento"></div>
+
+</div>
   <div id="configScanner">
     <input type="password" id="claveScanner" placeholder="Clave de recepción">
     <button onclick="guardarClaveEIniciar()">Iniciar check-in</button>
@@ -30,6 +42,27 @@
 <iframe id="checkinFrame" allow="camera"></iframe>
 <iframe id="validadorFrame" name="validadorFrame" style="display:none;"></iframe>
 
+  <form
+  id="formEvento"
+  method="post"
+  target="validadorFrame"
+  style="display:none;"
+>
+
+  <input
+    type="hidden"
+    name="accion"
+    value="validarEventoScanner"
+  >
+
+  <input
+    type="hidden"
+    name="evento"
+    id="eventoInicial"
+  >
+
+</form>
+  
 <form id="formValidador" method="post" target="validadorFrame" style="display:none;">
   <input type="hidden" name="accion" value="validarClaveCheckin">
   <input type="hidden" name="evento" id="eventoValidador">
@@ -53,6 +86,75 @@ let clavePendienteValidacion = "";
 const SESION_STORAGE = "sesionCheckin_" + EVENT_ID;
 const EXPIRA_STORAGE = "sesionCheckinExpira_" + EVENT_ID;
 
+function validarEventoInicial() {
+
+  if (!EVENT_ID) {
+
+    document
+      .getElementById(
+        "configScanner"
+      )
+      .style.display =
+      "none";
+
+
+    document
+      .getElementById(
+        "infoEvento"
+      )
+      .style.display =
+      "none";
+
+
+    document
+      .getElementById(
+        "estado"
+      )
+      .innerText =
+      "No se indicó el evento.";
+
+
+    return;
+  }
+
+
+  document
+    .getElementById(
+      "configScanner"
+    )
+    .style.display =
+    "none";
+
+
+  document
+    .getElementById(
+      "estado"
+    )
+    .innerText =
+    "Verificando evento...";
+
+
+  document
+    .getElementById(
+      "eventoInicial"
+    )
+    .value =
+    EVENT_ID;
+
+
+  const formulario =
+    document.getElementById(
+      "formEvento"
+    );
+
+
+  formulario.action =
+    BACKEND_URL;
+
+
+  formulario.submit();
+}
+  
 async function iniciarScanner() {
   if (scannerActivo || scannerIniciando) return;
   scannerIniciando = true;
@@ -144,6 +246,171 @@ async function codigoDetectado(decodedText) {
 window.addEventListener("message", function(event) {
   if (!event.data) return;
 
+  if (
+  event.data.tipo ===
+  "resultadoEventoScanner"
+) {
+
+  if (
+    !event.data.valido
+  ) {
+
+    localStorage.removeItem(
+      SESION_STORAGE
+    );
+
+
+    localStorage.removeItem(
+      EXPIRA_STORAGE
+    );
+
+
+    document
+      .getElementById(
+        "configScanner"
+      )
+      .style.display =
+      "none";
+
+
+    document
+      .getElementById(
+        "infoEvento"
+      )
+      .style.display =
+      "none";
+
+
+    document
+      .getElementById(
+        "estado"
+      )
+      .innerText =
+      "Evento no válido o inactivo.";
+
+
+    return;
+  }
+
+
+  /*
+    Evento válido:
+    mostrar identidad.
+  */
+
+  document
+    .getElementById(
+      "nombreEvento"
+    )
+    .innerText =
+    String(
+      event.data.nombres || ''
+    );
+
+
+  document
+    .getElementById(
+      "fechaEvento"
+    )
+    .innerText =
+    String(
+      event.data.fecha || ''
+    );
+
+
+  document
+    .getElementById(
+      "lugarEvento"
+    )
+    .innerText =
+    String(
+      event.data.lugar || ''
+    );
+
+
+  document
+    .getElementById(
+      "infoEvento"
+    )
+    .style.display =
+    "block";
+
+
+  /*
+    Ahora sí revisar si ya existe
+    una sesión vigente.
+  */
+
+  const sesion =
+    localStorage.getItem(
+      SESION_STORAGE
+    );
+
+
+  const expira =
+    Number(
+      localStorage.getItem(
+        EXPIRA_STORAGE
+      ) || 0
+    );
+
+
+  if (
+    sesion &&
+    expira > Date.now()
+  ) {
+
+    document
+      .getElementById(
+        "configScanner"
+      )
+      .style.display =
+      "none";
+
+
+    document
+      .getElementById(
+        "estado"
+      )
+      .innerText =
+      "Abriendo scanner...";
+
+
+    iniciarScanner();
+
+
+  } else {
+
+    localStorage.removeItem(
+      SESION_STORAGE
+    );
+
+
+    localStorage.removeItem(
+      EXPIRA_STORAGE
+    );
+
+
+    document
+      .getElementById(
+        "configScanner"
+      )
+      .style.display =
+      "block";
+
+
+    document
+      .getElementById(
+        "estado"
+      )
+      .innerText =
+      "Ingresa la clave para comenzar.";
+  }
+
+
+  return;
+}
+
   if (event.data.tipo === "checkinCompleto") {
     siguienteInvitado();
     return;
@@ -232,28 +499,16 @@ function guardarClaveEIniciar() {
   validarClaveScanner(clave);
 }
 
-window.addEventListener("load", function() {
-  if (!EVENT_ID) {
-    document.getElementById("configScanner").style.display = "none";
-    document.getElementById("estado").innerText = "No se indicó el evento.";
-    return;
+
+window.addEventListener(
+  "load",
+  function() {
+
+    validarEventoInicial();
+
   }
+);
 
-  const sesion = localStorage.getItem(SESION_STORAGE);
-  const expira = Number(localStorage.getItem(EXPIRA_STORAGE) || 0);
-
-  if (sesion && expira > Date.now()) {
-    document.getElementById("configScanner").style.display = "none";
-    iniciarScanner();
-    return;
-  }
-
-  localStorage.removeItem(SESION_STORAGE);
-  localStorage.removeItem(EXPIRA_STORAGE);
-
-  document.getElementById("configScanner").style.display = "block";
-  document.getElementById("estado").innerText = "Ingresa la clave para comenzar.";
-});
 </script>
 </body>
 </html>
