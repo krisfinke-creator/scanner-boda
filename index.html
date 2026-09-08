@@ -3,780 +3,257 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
   <title>Check-in</title>
-
   <script src="https://unpkg.com/html5-qrcode"></script>
-
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      background: #f7f7f7;
-      text-align: center;
-    }
-
-    header {
-      padding: 16px;
-      background: white;
-      border-bottom: 1px solid #ddd;
-    }
-
-    #reader {
-      width: 100%;
-      max-width: 520px;
-      margin: 20px auto;
-    }
-
-    #estado {
-      margin: 15px;
-      font-weight: bold;
-    }
-
-    #checkinFrame {
-      width: 100%;
-      height: 420px;
-      border: none;
-      background: white;
-      display: none;
-    }
-
-    button {
-      padding: 12px 20px;
-      font-size: 16px;
-      margin: 10px;
-    }
-    #clave {
-  width: 90%;
-  max-width: 350px;
-  box-sizing: border-box;
-  padding: 12px;
-  font-size: 16px;
-  margin: 8px;
-}
+    body{font-family:Arial,sans-serif;margin:0;background:#f7f7f7;text-align:center}
+    header{padding:16px;background:white;border-bottom:1px solid #ddd}
+    #reader{width:100%;max-width:520px;margin:20px auto}
+    #estado{margin:15px;font-weight:bold}
+    #checkinFrame{width:100%;height:420px;border:none;background:white;display:none}
+    button{padding:12px 20px;font-size:16px;margin:10px}
+    #claveScanner{width:90%;max-width:350px;box-sizing:border-box;padding:12px;font-size:16px;margin:8px}
   </style>
 </head>
-
 <body>
-
 <header>
- <h2>Check-in</h2>
-
-<div id="configScanner">
-
-  <input
-    type="password"
-    id="claveScanner"
-    placeholder="Clave de recepción"
-  >
-
-  <button onclick="guardarClaveEIniciar()">
-    Iniciar check-in
-  </button>
-
-</div>
-
-<div id="estado">
-  Ingresa la clave para comenzar
-</div>
+  <h2>Check-in</h2>
+  <div id="configScanner">
+    <input type="password" id="claveScanner" placeholder="Clave de recepción">
+    <button onclick="guardarClaveEIniciar()">Iniciar check-in</button>
+  </div>
+  <div id="estado">Ingresa la clave para comenzar</div>
 </header>
 
 <div id="reader"></div>
 
-<iframe
-  id="checkinFrame"
-  allow="camera"
-></iframe>
+<iframe id="checkinFrame" allow="camera"></iframe>
+<iframe id="validadorFrame" name="validadorFrame" style="display:none;"></iframe>
 
-<iframe
-  id="validadorFrame"
-  name="validadorFrame"
-  style="display:none;"
-></iframe>
-
-<form
-  id="formValidador"
-  method="post"
-  target="validadorFrame"
-  style="display:none;"
->
-
-  <input
-    type="hidden"
-    name="accion"
-    value="validarClaveCheckin"
-  >
-
-  <input
-    type="hidden"
-    name="evento"
-    id="eventoValidador"
-  >
-
-  <input
-    type="hidden"
-    name="clave"
-    id="claveValidador"
-  >
-
+<form id="formValidador" method="post" target="validadorFrame" style="display:none;">
+  <input type="hidden" name="accion" value="validarClaveCheckin">
+  <input type="hidden" name="evento" id="eventoValidador">
+  <input type="hidden" name="clave" id="claveValidador">
 </form>
-  
-<script>
 
+<script>
 const html5QrCode = new Html5Qrcode("reader");
 
-  const parametros =
-  new URLSearchParams(
-    window.location.search
-  );
+const parametros = new URLSearchParams(window.location.search);
+const EVENT_ID = String(parametros.get("evento") || "").trim().toLowerCase();
 
+const BACKEND_URL = "https://script.google.com/macros/s/AKfycbyzwIpnXnv40EomJw9gTrhf9Q4Csq8ij4Pb5nrXuC6M6sfDuIeMLh1tI_TgKam5_RWo/exec";
 
-const EVENT_ID =
-  String(
-    parametros.get("evento") || ""
-  )
-  .trim()
-  .toLowerCase();
-  
-const BACKEND_URL =
-  "https://script.google.com/macros/s/AKfycbyzwIpnXnv40EomJw9gTrhf9Q4Csq8ij4Pb5nrXuC6M6sfDuIeMLh1tI_TgKam5_RWo/exec";
-  if (!EVENT_ID) {
-
-  document
-    .getElementById("estado")
-    .innerText =
-    "No se indicó el evento.";
-}
-  
 let scannerActivo = false;
 let scannerIniciando = false;
 let ultimoCodigo = "";
 let ultimoEscaneo = 0;
 let clavePendienteValidacion = "";
 
-const SESION_STORAGE =
-  "sesionCheckin_" + EVENT_ID;
+const SESION_STORAGE = "sesionCheckin_" + EVENT_ID;
+const EXPIRA_STORAGE = "sesionCheckinExpira_" + EVENT_ID;
 
-const EXPIRA_STORAGE =
-  "sesionCheckinExpira_" + EVENT_ID;
-  
-  
 async function iniciarScanner() {
-
-  // Evitar iniciar la cámara dos veces
-  if (scannerActivo || scannerIniciando) {
-    return;
-  }
-
+  if (scannerActivo || scannerIniciando) return;
   scannerIniciando = true;
 
   try {
-
     await html5QrCode.start(
-
       { facingMode: "environment" },
-
       {
         fps: 10,
-
-        qrbox: function(
-          viewfinderWidth,
-          viewfinderHeight
-        ) {
-
-          const lado =
-            Math.floor(
-              Math.min(
-                viewfinderWidth,
-                viewfinderHeight
-              ) * 0.7
-            );
-
-          return {
-            width: lado,
-            height: lado
-          };
+        qrbox: function(viewfinderWidth, viewfinderHeight) {
+          const lado = Math.floor(Math.min(viewfinderWidth, viewfinderHeight) * 0.7);
+          return { width: lado, height: lado };
         }
       },
-
       codigoDetectado,
-
-      function(error) {
-        // Ignorar cuando simplemente no encuentra un QR
-      }
+      function() {}
     );
-
 
     scannerActivo = true;
     scannerIniciando = false;
-
-    document.getElementById("estado").innerText =
-      "Escanea un pase";
-
-
+    document.getElementById("estado").innerText = "Escanea un pase";
   } catch (error) {
-
     scannerIniciando = false;
-
     console.error("Error al iniciar cámara:", error);
-
-    // Solo mostrar error si realmente NO quedó activa
     if (!scannerActivo) {
-      document.getElementById("estado").innerText =
-        "No se pudo abrir la cámara.";
+      document.getElementById("estado").innerText = "No se pudo abrir la cámara.";
     }
   }
 }
 
-
 async function codigoDetectado(decodedText) {
-
   const ahora = Date.now();
 
-  // Evita leer el mismo QR muchas veces seguidas
-  if (
-    decodedText === ultimoCodigo &&
-    ahora - ultimoEscaneo < 3000
-  ) {
-    return;
-  }
+  if (decodedText === ultimoCodigo && ahora - ultimoEscaneo < 3000) return;
 
   ultimoCodigo = decodedText;
   ultimoEscaneo = ahora;
 
+  let urlQR;
 
-  // Solo aceptar nuestros QR de check-in
-  if (!decodedText.includes("modo=checkin")) {
-
-    document.getElementById("estado").innerText =
-      "Este QR no pertenece al sistema.";
-
+  try {
+    urlQR = new URL(decodedText);
+  } catch (error) {
+    document.getElementById("estado").innerText = "El código QR no es válido.";
     return;
   }
-let urlQR;
 
+  if (urlQR.searchParams.get("modo") !== "checkin") {
+    document.getElementById("estado").innerText = "Este QR no pertenece al sistema.";
+    return;
+  }
 
-try {
+  const eventoQR = String(urlQR.searchParams.get("evento") || "").trim().toLowerCase();
 
-  urlQR =
-    new URL(
-      decodedText
-    );
+  if (!eventoQR || eventoQR !== EVENT_ID) {
+    document.getElementById("estado").innerText = "Este pase pertenece a otro evento.";
+    return;
+  }
 
-} catch (error) {
+  try { await html5QrCode.pause(true); } catch (error) {}
 
-  document
-    .getElementById("estado")
-    .innerText =
-    "El código QR no es válido.";
+  document.getElementById("reader").style.display = "none";
+  document.getElementById("estado").innerText = "Pase detectado";
 
-  return;
+  const sesion = localStorage.getItem(SESION_STORAGE) || "";
+  const expira = Number(localStorage.getItem(EXPIRA_STORAGE) || 0);
+
+  if (!sesion || expira <= Date.now()) {
+    localStorage.removeItem(SESION_STORAGE);
+    localStorage.removeItem(EXPIRA_STORAGE);
+
+    document.getElementById("estado").innerText =
+      "La sesión de recepción terminó. Ingresa nuevamente la contraseña.";
+    document.getElementById("configScanner").style.display = "block";
+    document.getElementById("reader").style.display = "block";
+
+    try { html5QrCode.resume(); } catch (error) {}
+    return;
+  }
+
+  urlQR.searchParams.set("sesion", sesion);
+
+  const frame = document.getElementById("checkinFrame");
+  frame.src = urlQR.toString();
+  frame.style.display = "block";
+  frame.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
+window.addEventListener("message", function(event) {
+  if (!event.data) return;
 
-const eventoQR =
-  String(
-    urlQR.searchParams.get(
-      "evento"
-    ) || ""
-  )
-  .trim()
-  .toLowerCase();
+  if (event.data.tipo === "checkinCompleto") {
+    siguienteInvitado();
+    return;
+  }
 
+  if (event.data.tipo !== "resultadoClaveScanner") return;
 
-if (
-  !eventoQR ||
-  eventoQR !== EVENT_ID
-) {
+  if (event.data.valida) {
+    const tokenSesion = String(event.data.token || "");
+    const expiraSesion = Number(event.data.expira || 0);
 
-  document
-    .getElementById("estado")
-    .innerText =
-    "Este pase pertenece a otro evento.";
+    if (!tokenSesion || !expiraSesion) {
+      document.getElementById("estado").innerText =
+        "No se pudo crear la sesión de recepción.";
+      return;
+    }
 
-  return;
-}
+    localStorage.setItem(SESION_STORAGE, tokenSesion);
+    localStorage.setItem(EXPIRA_STORAGE, String(expiraSesion));
+    localStorage.removeItem("claveCheckin_" + EVENT_ID);
+    clavePendienteValidacion = "";
 
-  try {
-  await html5QrCode.pause(true);
-} catch (e) {}
+    document.getElementById("configScanner").style.display = "none";
+    document.getElementById("estado").innerText =
+      "Contraseña correcta. Iniciando cámara...";
 
+    iniciarScanner();
+  } else {
+    localStorage.removeItem(SESION_STORAGE);
+    localStorage.removeItem(EXPIRA_STORAGE);
+    clavePendienteValidacion = "";
 
-// Ocultar completamente la cámara pausada
-document.getElementById("reader").style.display = "none";
+    document.getElementById("configScanner").style.display = "block";
 
-document.getElementById("estado").innerText =
-  "Pase detectado";
+    const campo = document.getElementById("claveScanner");
+    campo.value = "";
+    campo.focus();
 
-
-const frame =
-  document.getElementById(
-    "checkinFrame"
-  );
-
-
-const sesion =
-  localStorage.getItem(
-    SESION_STORAGE
-  ) || "";
-
-
-if (!sesion) {
-
-  document
-    .getElementById("estado")
-    .innerText =
-    "La sesión de recepción terminó. Ingresa nuevamente la contraseña.";
-
-
-  document
-    .getElementById(
-      "configScanner"
-    )
-    .style.display =
-    "block";
-
-
-  return;
-}
-
-
-const urlPase =
-  new URL(
-    decodedText
-  );
-
-
-urlPase.searchParams.set(
-  "sesion",
-  sesion
-);
-
-
-frame.src =
-  urlPase.toString();
-
-
-frame.style.display =
-  "block";
-  
-  frame.onload = function() {
-
-const claveGuardada =
-  localStorage.getItem(
-    CLAVE_STORAGE
-  ) || "";
-
-  frame.contentWindow.postMessage(
-    {
-      tipo: "claveCheckin",
-      clave: claveGuardada
-    },
-    "*"
-  );
-};
-
-
-// Llevar automáticamente a la ficha
-frame.scrollIntoView({
-  behavior: "smooth",
-  block: "start"
+    document.getElementById("estado").innerText =
+      "Contraseña incorrecta. Inténtalo de nuevo.";
+  }
 });
-}
-
-window.addEventListener(
-  "load",
-  function() {
-
-    if (!EVENT_ID) {
-
-      document
-        .getElementById(
-          "configScanner"
-        )
-        .style.display =
-        "none";
-
-
-      document
-        .getElementById(
-          "estado"
-        )
-        .innerText =
-        "No se indicó el evento.";
-
-      return;
-    }
-
-
-    const sesion =
-      localStorage.getItem(
-        SESION_STORAGE
-      );
-
-
-    const expira =
-      Number(
-        localStorage.getItem(
-          EXPIRA_STORAGE
-        ) || 0
-      );
-
-
-    /*
-      Sesión todavía vigente.
-    */
-
-    if (
-      sesion &&
-      expira > Date.now()
-    ) {
-
-      document
-        .getElementById(
-          "configScanner"
-        )
-        .style.display =
-        "none";
-
-
-      iniciarScanner();
-
-      return;
-    }
-
-
-    /*
-      Sesión vencida o inexistente.
-    */
-
-    localStorage.removeItem(
-      SESION_STORAGE
-    );
-
-
-    localStorage.removeItem(
-      EXPIRA_STORAGE
-    );
-
-
-    document
-      .getElementById(
-        "configScanner"
-      )
-      .style.display =
-      "block";
-
-
-    document
-      .getElementById(
-        "estado"
-      )
-      .innerText =
-      "Ingresa la clave para comenzar.";
-  }
-);
-
-const expiraSesion =
-  Number(
-    event.data.expira || 0
-  );
-
-
-if (
-  !tokenSesion ||
-  !expiraSesion
-) {
-
-  document
-    .getElementById("estado")
-    .innerText =
-    "No se pudo crear la sesión de recepción.";
-
-  return;
-}
-
-
-localStorage.setItem(
-  SESION_STORAGE,
-  tokenSesion
-);
-
-
-localStorage.setItem(
-  EXPIRA_STORAGE,
-  String(expiraSesion)
-);
-
-
-clavePendienteValidacion = "";
-
-
-/*
-  Limpiar cualquier contraseña
-  antigua que hubiera quedado
-  de versiones anteriores.
-*/
-
-localStorage.removeItem(
-  "claveCheckin_" + EVENT_ID
-);
-
-
-        document
-          .getElementById(
-            "configScanner"
-          )
-          .style.display =
-          "none";
-
-
-        document
-          .getElementById(
-            "estado"
-          )
-          .innerText =
-          "Contraseña correcta. Iniciando cámara...";
-
-
-        iniciarScanner();
-
-
-      } else {
-
-        localStorage.removeItem(
-          CLAVE_STORAGE
-        );
-
-
-        clavePendienteValidacion =
-          "";
-
-
-        document
-          .getElementById(
-            "configScanner"
-          )
-          .style.display =
-          "block";
-
-
-        const campo =
-          document.getElementById(
-            "claveScanner"
-          );
-
-
-        campo.value = "";
-
-        campo.focus();
-
-
-        document
-          .getElementById(
-            "estado"
-          )
-          .innerText =
-          "Contraseña incorrecta. Inténtalo de nuevo.";
-      }
-    }
-
-  }
-);
-
 
 async function siguienteInvitado() {
-
-  const frame =
-    document.getElementById("checkinFrame");
-
+  const frame = document.getElementById("checkinFrame");
   frame.style.display = "none";
   frame.src = "";
-
   ultimoCodigo = "";
 
-  document.getElementById("estado").innerText =
-    "Escanea el siguiente pase";
-
-
-  // Volver a mostrar la cámara
+  document.getElementById("estado").innerText = "Escanea el siguiente pase";
   document.getElementById("reader").style.display = "block";
 
+  try { html5QrCode.resume(); } catch (error) { console.error(error); }
 
-  try {
-    html5QrCode.resume();
-  } catch (e) {
-    console.error(e);
-  }
-
-
-  // Regresar automáticamente a la cámara
   document.getElementById("reader").scrollIntoView({
     behavior: "smooth",
     block: "center"
   });
 }
 
-function validarClaveScanner(
-  clave
-) {
+function validarClaveScanner(clave) {
+  clavePendienteValidacion = String(clave || "").trim();
 
-  clavePendienteValidacion =
-    String(
-      clave || ""
-    ).trim();
-
-
-  document
-    .getElementById(
-      "estado"
-    )
-    .innerText =
-    "Verificando contraseña...";
-
-
-  if (
-    !clavePendienteValidacion
-  ) {
-
-    document
-      .getElementById(
-        "estado"
-      )
-      .innerText =
+  if (!clavePendienteValidacion) {
+    document.getElementById("estado").innerText =
       "Ingresa la contraseña de recepción.";
-
     return;
   }
 
+  document.getElementById("estado").innerText = "Verificando contraseña...";
 
-  const formulario =
-    document.getElementById(
-      "formValidador"
-    );
-
-
-  formulario.action =
-    BACKEND_URL;
-
-
-  document
-    .getElementById(
-      "eventoValidador"
-    )
-    .value =
-    EVENT_ID;
-
-
-  document
-    .getElementById(
-      "claveValidador"
-    )
-    .value =
-    clavePendienteValidacion;
-
-
+  const formulario = document.getElementById("formValidador");
+  formulario.action = BACKEND_URL;
+  document.getElementById("eventoValidador").value = EVENT_ID;
+  document.getElementById("claveValidador").value = clavePendienteValidacion;
   formulario.submit();
 }
-  
+
 function guardarClaveEIniciar() {
-
-  const clave =
-    document
-      .getElementById(
-        "claveScanner"
-      )
-      .value
-      .trim();
-
-
   if (!EVENT_ID) {
-
-    document
-      .getElementById(
-        "estado"
-      )
-      .innerText =
-      "No se indicó el evento.";
-
+    document.getElementById("estado").innerText = "No se indicó el evento.";
     return;
   }
 
-
-  if (!clave) {
-
-    document
-      .getElementById(
-        "estado"
-      )
-      .innerText =
-      "Ingresa la contraseña de recepción.";
-
-    return;
-  }
-
-
-  validarClaveScanner(
-    clave
-  );
+  const clave = document.getElementById("claveScanner").value.trim();
+  validarClaveScanner(clave);
 }
 
-window.addEventListener(
-  "load",
-  function() {
-
-    if (!EVENT_ID) {
-
-      document
-        .getElementById(
-          "configScanner"
-        )
-        .style.display =
-        "none";
-
-
-      document
-        .getElementById(
-          "estado"
-        )
-        .innerText =
-        "No se indicó el evento.";
-
-      return;
-    }
-
-
-    const claveGuardada =
-      localStorage.getItem(
-        CLAVE_STORAGE
-      );
-
-
-    if (
-      claveGuardada
-    ) {
-
-      document
-        .getElementById(
-          "claveScanner"
-        )
-        .value =
-        claveGuardada;
-
-
-      /*
-        Aunque esté guardada,
-        volver a comprobarla.
-      */
-
-      validarClaveScanner(
-        claveGuardada
-      );
-    }
-
+window.addEventListener("load", function() {
+  if (!EVENT_ID) {
+    document.getElementById("configScanner").style.display = "none";
+    document.getElementById("estado").innerText = "No se indicó el evento.";
+    return;
   }
-); 
-</script>
 
+  const sesion = localStorage.getItem(SESION_STORAGE);
+  const expira = Number(localStorage.getItem(EXPIRA_STORAGE) || 0);
+
+  if (sesion && expira > Date.now()) {
+    document.getElementById("configScanner").style.display = "none";
+    iniciarScanner();
+    return;
+  }
+
+  localStorage.removeItem(SESION_STORAGE);
+  localStorage.removeItem(EXPIRA_STORAGE);
+
+  document.getElementById("configScanner").style.display = "block";
+  document.getElementById("estado").innerText = "Ingresa la clave para comenzar.";
+});
+</script>
 </body>
 </html>
