@@ -76,6 +76,7 @@ const parametros = new URLSearchParams(window.location.search);
 const EVENT_ID = String(parametros.get("evento") || "").trim().toLowerCase();
 
 const BACKEND_URL = "https://script.google.com/macros/s/AKfycbyzwIpnXnv40EomJw9gTrhf9Q4Csq8ij4Pb5nrXuC6M6sfDuIeMLh1tI_TgKam5_RWo/exec";
+const BACKEND_QR_URL = new URL(BACKEND_URL);
 
 let scannerActivo = false;
 let scannerIniciando = false;
@@ -202,6 +203,17 @@ async function codigoDetectado(decodedText) {
     return;
   }
 
+  const mismaRutaBackend =
+    urlQR.origin === BACKEND_QR_URL.origin &&
+    urlQR.pathname.replace(/\/+$/, "") ===
+      BACKEND_QR_URL.pathname.replace(/\/+$/, "");
+
+  if (!mismaRutaBackend) {
+    document.getElementById("estado").innerText =
+      "Este QR no pertenece a este sistema.";
+    return;
+  }
+
   if (urlQR.searchParams.get("modo") !== "checkin") {
     document.getElementById("estado").innerText = "Este QR no pertenece al sistema.";
     return;
@@ -246,119 +258,263 @@ async function codigoDetectado(decodedText) {
 window.addEventListener("message", function(event) {
   if (!event.data) return;
 
-  if (
-  event.data.tipo ===
-  "resultadoEventoScanner"
-) {
+  const tipo = String(event.data.tipo || "");
+
+  const validadorFrame =
+    document.getElementById("validadorFrame");
+
+  const checkinFrame =
+    document.getElementById("checkinFrame");
+
+
+  /*
+    Los mensajes de validación solo pueden
+    venir del iframe oculto que nosotros
+    usamos para hablar con el backend.
+  */
 
   if (
-    !event.data.valido
+    tipo === "resultadoEventoScanner" ||
+    tipo === "resultadoClaveScanner"
   ) {
 
-    localStorage.removeItem(
-      SESION_STORAGE
-    );
+    if (
+      event.source !==
+      validadorFrame.contentWindow
+    ) {
+      return;
+    }
+
+    const eventoMensaje =
+      String(
+        event.data.evento || ""
+      )
+      .trim()
+      .toLowerCase();
+
+    if (
+      !eventoMensaje ||
+      eventoMensaje !== EVENT_ID
+    ) {
+      return;
+    }
+  }
 
 
-    localStorage.removeItem(
-      EXPIRA_STORAGE
-    );
+  /*
+    El mensaje que termina un check-in
+    solo puede venir del iframe donde
+    abrimos el pase actual.
+  */
+
+  if (
+    tipo === "checkinCompleto"
+  ) {
+
+    if (
+      event.source !==
+      checkinFrame.contentWindow
+    ) {
+      return;
+    }
+
+    siguienteInvitado();
+    return;
+  }
+
+
+  if (
+    tipo ===
+    "resultadoEventoScanner"
+  ) {
+
+    if (
+      !event.data.valido
+    ) {
+
+      localStorage.removeItem(
+        SESION_STORAGE
+      );
+
+      localStorage.removeItem(
+        EXPIRA_STORAGE
+      );
+
+      document
+        .getElementById(
+          "configScanner"
+        )
+        .style.display =
+        "none";
+
+      document
+        .getElementById(
+          "infoEvento"
+        )
+        .style.display =
+        "none";
+
+      document
+        .getElementById(
+          "estado"
+        )
+        .innerText =
+        "Evento no válido o inactivo.";
+
+      return;
+    }
 
 
     document
       .getElementById(
-        "configScanner"
+        "nombreEvento"
       )
-      .style.display =
-      "none";
+      .innerText =
+      String(
+        event.data.nombres || ""
+      );
 
+    document
+      .getElementById(
+        "fechaEvento"
+      )
+      .innerText =
+      String(
+        event.data.fecha || ""
+      );
+
+    document
+      .getElementById(
+        "lugarEvento"
+      )
+      .innerText =
+      String(
+        event.data.lugar || ""
+      );
 
     document
       .getElementById(
         "infoEvento"
       )
       .style.display =
-      "none";
+      "block";
 
 
-    document
-      .getElementById(
-        "estado"
-      )
-      .innerText =
-      "Evento no válido o inactivo.";
+    const sesion =
+      localStorage.getItem(
+        SESION_STORAGE
+      );
 
+    const expira =
+      Number(
+        localStorage.getItem(
+          EXPIRA_STORAGE
+        ) || 0
+      );
+
+
+    if (
+      sesion &&
+      expira > Date.now()
+    ) {
+
+      document
+        .getElementById(
+          "configScanner"
+        )
+        .style.display =
+        "none";
+
+      document
+        .getElementById(
+          "estado"
+        )
+        .innerText =
+        "Abriendo scanner...";
+
+      iniciarScanner();
+
+    } else {
+
+      localStorage.removeItem(
+        SESION_STORAGE
+      );
+
+      localStorage.removeItem(
+        EXPIRA_STORAGE
+      );
+
+      document
+        .getElementById(
+          "configScanner"
+        )
+        .style.display =
+        "block";
+
+      document
+        .getElementById(
+          "estado"
+        )
+        .innerText =
+        "Ingresa la clave para comenzar.";
+    }
 
     return;
   }
 
 
-  /*
-    Evento válido:
-    mostrar identidad.
-  */
-
-  document
-    .getElementById(
-      "nombreEvento"
-    )
-    .innerText =
-    String(
-      event.data.nombres || ''
-    );
-
-
-  document
-    .getElementById(
-      "fechaEvento"
-    )
-    .innerText =
-    String(
-      event.data.fecha || ''
-    );
-
-
-  document
-    .getElementById(
-      "lugarEvento"
-    )
-    .innerText =
-    String(
-      event.data.lugar || ''
-    );
-
-
-  document
-    .getElementById(
-      "infoEvento"
-    )
-    .style.display =
-    "block";
-
-
-  /*
-    Ahora sí revisar si ya existe
-    una sesión vigente.
-  */
-
-  const sesion =
-    localStorage.getItem(
-      SESION_STORAGE
-    );
-
-
-  const expira =
-    Number(
-      localStorage.getItem(
-        EXPIRA_STORAGE
-      ) || 0
-    );
-
-
   if (
-    sesion &&
-    expira > Date.now()
+    tipo !==
+    "resultadoClaveScanner"
   ) {
+    return;
+  }
+
+
+  if (event.data.valida) {
+
+    const tokenSesion =
+      String(
+        event.data.token || ""
+      );
+
+    const expiraSesion =
+      Number(
+        event.data.expira || 0
+      );
+
+    if (
+      !tokenSesion ||
+      !expiraSesion
+    ) {
+
+      document
+        .getElementById(
+          "estado"
+        )
+        .innerText =
+        "No se pudo crear la sesión de recepción.";
+
+      return;
+    }
+
+    localStorage.setItem(
+      SESION_STORAGE,
+      tokenSesion
+    );
+
+    localStorage.setItem(
+      EXPIRA_STORAGE,
+      String(
+        expiraSesion
+      )
+    );
+
+    localStorage.removeItem(
+      "claveCheckin_" + EVENT_ID
+    );
+
+    clavePendienteValidacion = "";
 
     document
       .getElementById(
@@ -367,17 +523,14 @@ window.addEventListener("message", function(event) {
       .style.display =
       "none";
 
-
     document
       .getElementById(
         "estado"
       )
       .innerText =
-      "Abriendo scanner...";
-
+      "Contraseña correcta. Iniciando cámara...";
 
     iniciarScanner();
-
 
   } else {
 
@@ -385,11 +538,11 @@ window.addEventListener("message", function(event) {
       SESION_STORAGE
     );
 
-
     localStorage.removeItem(
       EXPIRA_STORAGE
     );
 
+    clavePendienteValidacion = "";
 
     document
       .getElementById(
@@ -398,58 +551,19 @@ window.addEventListener("message", function(event) {
       .style.display =
       "block";
 
+    const campo =
+      document.getElementById(
+        "claveScanner"
+      );
+
+    campo.value = "";
+    campo.focus();
 
     document
       .getElementById(
         "estado"
       )
       .innerText =
-      "Ingresa la clave para comenzar.";
-  }
-
-
-  return;
-}
-
-  if (event.data.tipo === "checkinCompleto") {
-    siguienteInvitado();
-    return;
-  }
-
-  if (event.data.tipo !== "resultadoClaveScanner") return;
-
-  if (event.data.valida) {
-    const tokenSesion = String(event.data.token || "");
-    const expiraSesion = Number(event.data.expira || 0);
-
-    if (!tokenSesion || !expiraSesion) {
-      document.getElementById("estado").innerText =
-        "No se pudo crear la sesión de recepción.";
-      return;
-    }
-
-    localStorage.setItem(SESION_STORAGE, tokenSesion);
-    localStorage.setItem(EXPIRA_STORAGE, String(expiraSesion));
-    localStorage.removeItem("claveCheckin_" + EVENT_ID);
-    clavePendienteValidacion = "";
-
-    document.getElementById("configScanner").style.display = "none";
-    document.getElementById("estado").innerText =
-      "Contraseña correcta. Iniciando cámara...";
-
-    iniciarScanner();
-  } else {
-    localStorage.removeItem(SESION_STORAGE);
-    localStorage.removeItem(EXPIRA_STORAGE);
-    clavePendienteValidacion = "";
-
-    document.getElementById("configScanner").style.display = "block";
-
-    const campo = document.getElementById("claveScanner");
-    campo.value = "";
-    campo.focus();
-
-    document.getElementById("estado").innerText =
       "Contraseña incorrecta. Inténtalo de nuevo.";
   }
 });
