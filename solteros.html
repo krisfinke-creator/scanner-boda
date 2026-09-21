@@ -76,6 +76,14 @@
       .trim()
       .toLowerCase();
 
+    const LANG =
+      String(
+        parametros.get("lang") || ""
+      )
+      .trim()
+      .toLowerCase();
+
+
 
     const frame =
       document.getElementById(
@@ -119,6 +127,17 @@
         "evento",
         EVENT_ID
       );
+
+      if (
+        LANG === "es" ||
+        LANG === "en"
+      ) {
+
+        url.searchParams.set(
+          "lang",
+          LANG
+        );
+      }
 
 
       frame.src =
