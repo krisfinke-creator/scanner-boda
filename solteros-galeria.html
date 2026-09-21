@@ -76,6 +76,14 @@
       .trim()
       .toLowerCase();
 
+    const LANG =
+      String(
+        parametros.get("lang") || ""
+      )
+      .trim()
+      .toLowerCase();
+
+
     const TOKEN =
       String(
         parametros.get("token") || ""
@@ -136,6 +144,17 @@
         "token",
         TOKEN
       );
+
+      if (
+        LANG === "es" ||
+        LANG === "en"
+      ) {
+
+        url.searchParams.set(
+          "lang",
+          LANG
+        );
+      }
 
 
       frame.src =
