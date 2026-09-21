@@ -1,3 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  >
+  <meta name="robots" content="noindex,nofollow">
+  <title>RSVP</title>
+
+  <style>
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #ffffff;
+      font-family: Arial, sans-serif;
+    }
+
+    #estado {
+      display: none;
+      min-height: 100vh;
+      box-sizing: border-box;
+      padding: 40px 22px;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      color: #333;
+      background: #fff;
+    }
+
+    #estado.visible {
+      display: flex;
+    }
+
+    #rsvpFrame {
+      display: block;
+      width: 100%;
+      height: 100dvh;
+      min-height: 100vh;
+      border: 0;
+      margin: 0;
+      padding: 0;
+      background: #fff;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="estado"></div>
+
+  <iframe
+    id="rsvpFrame"
+    title="Confirmación de asistencia"
+    referrerpolicy="strict-origin-when-cross-origin"
+  ></iframe>
+
+  <script>
+    const BACKEND_URL =
+      "https://script.google.com/macros/s/AKfycbwRHyoh8FE4aA9DyDJa3RhyFAMlNpR6_Q5_UgC6JFma_zPdpBrwmqsthVZdvgekPNmV/exec";
+
+    const parametros =
+      new URLSearchParams(
+        window.location.search
+      );
+
+    const EVENT_ID =
+      String(
+        parametros.get("evento") || ""
+      )
+      .trim()
+      .toLowerCase();
+
+    const LANG =
+      String(
+        parametros.get("lang") || ""
+      )
+      .trim()
+      .toLowerCase();
+
+    const frame =
+      document.getElementById(
+        "rsvpFrame"
+      );
+
+    const estado =
+      document.getElementById(
+        "estado"
+      );
+
+
     function mostrarError(
       mensaje
     ) {
@@ -17,7 +113,7 @@
     if (!EVENT_ID) {
 
       mostrarError(
-        "No se indicó el evento."
+        "No se indico el evento."
       );
 
     } else {
@@ -46,54 +142,6 @@
       frame.src =
         url.toString();
     }
-
-
-    window.addEventListener(
-      "message",
-      function(event) {
-
-        const data =
-          event &&
-          event.data
-            ? event.data
-            : null;
-
-
-        if (
-          event.source !==
-            frame.contentWindow ||
-          !data ||
-          data.tipo !==
-            "rsvp-cambio-idioma" ||
-          (
-            data.idioma !== "es" &&
-            data.idioma !== "en"
-          )
-        ) {
-
-          return;
-        }
-
-
-        const nuevaUrl =
-          new URL(
-            window.location.href
-          );
-
-
-        nuevaUrl.searchParams.set(
-          "lang",
-          data.idioma
-        );
-
-
-        window.history.replaceState(
-          {},
-          "",
-          nuevaUrl.toString()
-        );
-      }
-    );
   </script>
 
 </body>
