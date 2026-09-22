@@ -13,8 +13,15 @@
     #checkinFrame{width:100%;height:420px;border:none;background:white;display:none}
     button{padding:12px 20px;font-size:16px;margin:10px}
     #claveScanner{width:90%;max-width:350px;box-sizing:border-box;padding:12px;font-size:16px;margin:8px}
-    #accionesRecepcion{display:none;justify-content:center;gap:8px;flex-wrap:wrap;max-width:520px;margin:8px auto 0;padding:0 12px;box-sizing:border-box}
-    #accionesRecepcion button{margin:4px}
+    #accionesRecepcion{display:none;max-width:520px;margin:0 auto 18px;padding:0 12px;box-sizing:border-box}
+    .manual-card{background:white;border:1px solid #e6dfd5;border-radius:16px;box-shadow:0 6px 18px rgba(0,0,0,.05);padding:14px 16px}
+    .manual-card .eyebrow{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#8c857b;margin-bottom:6px;font-weight:700}
+    .manual-card h4{margin:0 0 6px;font-size:18px;color:#403a35}
+    .manual-card p{margin:0;font-size:14px;line-height:1.45;color:#6c665f}
+    .manual-card .actions{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:12px}
+    .manual-card button{margin:0}
+    .btn-primary-soft{background:#efe6db;border:1px solid #d8c7b4;color:#4b4136;border-radius:999px;font-weight:600}
+    .btn-secondary-soft{background:#fff;border:1px solid #d8c7b4;color:#6b5e4e;border-radius:999px;font-weight:600}
   </style>
 </head>
 <body>
@@ -39,16 +46,30 @@
   <div id="estado">Ingresa la clave para comenzar</div>
 </header>
 
-<div id="accionesRecepcion">
-  <button id="btnBusquedaManual" type="button" onclick="abrirBusquedaManual()">
-    Buscar invitado
-  </button>
-  <button id="btnVolverScanner" type="button" onclick="siguienteInvitado()" style="display:none;">
-    Volver al scanner
-  </button>
-</div>
-
 <div id="reader"></div>
+
+<div id="accionesRecepcion">
+  <div class="manual-card" id="manualCardScanner">
+    <div class="eyebrow">Opción alternativa</div>
+    <h4>¿No puedes escanear el código?</h4>
+    <p>Si el pase no abre, la pantalla está rota o prefieres buscar a la persona por nombre, haz el check-in manual aquí.</p>
+    <div class="actions">
+      <button id="btnBusquedaManual" class="btn-primary-soft" type="button" onclick="abrirBusquedaManual()">
+        Buscar invitado manualmente
+      </button>
+    </div>
+  </div>
+  <div class="manual-card" id="manualCardBusqueda" style="display:none;">
+    <div class="eyebrow">Búsqueda manual</div>
+    <h4>Registro sin escanear QR</h4>
+    <p>Busca a la persona por nombre o invitación y, cuando termines, vuelve al lector para seguir escaneando pases.</p>
+    <div class="actions">
+      <button id="btnVolverScanner" class="btn-secondary-soft" type="button" onclick="siguienteInvitado()">
+        Volver al escáner
+      </button>
+    </div>
+  </div>
+</div>
 
 <iframe id="checkinFrame" allow="camera"></iframe>
 <iframe id="validadorFrame" name="validadorFrame" style="display:none;"></iframe>
@@ -130,28 +151,28 @@ const EXPIRA_STORAGE = "sesionCheckinExpira_" + EVENT_ID;
 
 function mostrarAccionesRecepcion(modo) {
   const contenedor = document.getElementById("accionesRecepcion");
-  const btnBuscar = document.getElementById("btnBusquedaManual");
-  const btnVolver = document.getElementById("btnVolverScanner");
+  const cardScanner = document.getElementById("manualCardScanner");
+  const cardBusqueda = document.getElementById("manualCardBusqueda");
 
-  if (!contenedor || !btnBuscar || !btnVolver) return;
+  if (!contenedor || !cardScanner || !cardBusqueda) return;
 
   if (modo === "scanner") {
-    contenedor.style.display = "flex";
-    btnBuscar.style.display = "inline-block";
-    btnVolver.style.display = "none";
+    contenedor.style.display = "block";
+    cardScanner.style.display = "block";
+    cardBusqueda.style.display = "none";
     return;
   }
 
   if (modo === "manual") {
-    contenedor.style.display = "flex";
-    btnBuscar.style.display = "none";
-    btnVolver.style.display = "inline-block";
+    contenedor.style.display = "block";
+    cardScanner.style.display = "none";
+    cardBusqueda.style.display = "block";
     return;
   }
 
   contenedor.style.display = "none";
-  btnBuscar.style.display = "none";
-  btnVolver.style.display = "none";
+  cardScanner.style.display = "none";
+  cardBusqueda.style.display = "none";
 }
 
 async function abrirBusquedaManual() {
