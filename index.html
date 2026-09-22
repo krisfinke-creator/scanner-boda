@@ -7,43 +7,37 @@
   <script src="https://unpkg.com/html5-qrcode"></script>
   <style>
     *{box-sizing:border-box}
-    body{font-family:Arial,sans-serif;margin:0;background:#f6f4f1;color:#302d29;text-align:center}
-    header{padding:22px 16px 18px;background:#fff;border-bottom:1px solid #e6e1da}
-    header h2{margin:0 0 12px;font-size:26px;font-weight:700}
-    #infoEvento h3{margin:6px 0 4px;font-size:20px}
-    #infoEvento div{font-size:14px;color:#6f685f;line-height:1.45}
+    body{font-family:Arial,sans-serif;margin:0;background:#f6f4f1;color:#302d2a;text-align:center}
+    header{padding:22px 16px 16px;background:#fff;border-bottom:1px solid #e8e3dc}
+    header h2{margin:0 0 8px;font-size:24px}
+    #infoEvento h3{margin:8px 0 4px;font-size:19px}
+    #fechaEvento,#lugarEvento{font-size:14px;color:#716b64;line-height:1.45}
+    #estado{margin:14px auto 0;font-weight:700;color:#4a4540;max-width:520px}
     #configScanner{margin-top:14px}
-    #claveScanner{width:90%;max-width:350px;padding:12px 14px;font-size:16px;margin:6px;border:1px solid #d8d2ca;border-radius:10px;background:#fff}
-    button{padding:12px 20px;font-size:16px;border-radius:10px;cursor:pointer}
-    #configScanner button{margin:6px;border:0;background:#3f3a34;color:#fff;font-weight:700}
-    #estado{margin:14px auto 0;max-width:520px;font-size:14px;font-weight:700;color:#5b554d}
+    #claveScanner{width:90%;max-width:350px;padding:12px 14px;font-size:16px;margin:6px;border:1px solid #d7d0c8;border-radius:10px;background:#fff}
+    button{padding:12px 20px;font-size:16px;margin:8px;border:0;border-radius:10px;cursor:pointer}
+    #configScanner button{background:#403a35;color:#fff;font-weight:700}
 
-    .scanner-shell{display:none;width:min(100% - 24px,560px);margin:22px auto 28px}
-    .scanner-card{background:#fff;border:1px solid #e6e1da;border-radius:20px;box-shadow:0 10px 28px rgba(46,40,32,.06);overflow:hidden}
-    .scanner-head{padding:18px 18px 0;text-align:left}
-    .scanner-kicker{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#9a9187;font-weight:700}
-    .scanner-head h3{margin:5px 0 6px;font-size:20px}
-    .scanner-head p{margin:0;color:#746d64;font-size:14px;line-height:1.45}
-    #reader{width:100%;max-width:520px;margin:14px auto 0;padding:0 12px 12px}
+    /* Lector principal: siempre visible cuando html5-qrcode lo inicia. */
+    #reader{width:calc(100% - 24px);max-width:520px;margin:22px auto 14px;background:#fff;border:1px solid #e8e3dc;border-radius:18px;overflow:hidden;box-shadow:0 8px 24px rgba(46,40,32,.06)}
     #reader video{border-radius:14px}
 
-    #accionesRecepcion{display:none;padding:0 18px 18px}
-    .manual-divider{display:flex;align-items:center;gap:12px;color:#aaa29a;font-size:12px;margin:0 0 14px}
-    .manual-divider:before,.manual-divider:after{content:"";height:1px;flex:1;background:#ece7e1}
-    .manual-card{background:#faf8f5;border:1px solid #ebe4db;border-radius:14px;padding:14px 14px 15px;text-align:left}
-    .manual-card h4{margin:0 0 5px;font-size:16px;color:#403a35}
-    .manual-card p{margin:0;color:#71695f;font-size:13px;line-height:1.45}
-    .manual-card .actions{margin-top:11px}
-    .btn-primary-soft{width:100%;margin:0;background:#efe6db;border:1px solid #d8c7b4;color:#493f34;font-weight:700}
+    /* Alternativa manual: secundaria y debajo del lector. */
+    #accionesRecepcion{display:none;width:calc(100% - 24px);max-width:520px;margin:0 auto 24px}
+    .manual-card{background:#fff;border:1px solid #e8e3dc;border-radius:16px;padding:16px 18px;box-shadow:0 6px 18px rgba(46,40,32,.04)}
+    .manual-card .eyebrow{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#91897f;margin-bottom:6px;font-weight:700}
+    .manual-card h4{margin:0 0 6px;font-size:17px;color:#403a35}
+    .manual-card p{margin:0;font-size:14px;line-height:1.5;color:#6c665f}
+    .manual-card .actions{margin-top:12px}
+    .manual-card button{margin:0;background:#efe8df;color:#4b4136;border:1px solid #d8cabc;border-radius:999px;font-weight:700}
 
-    #checkinFrame{width:min(100% - 24px,720px);height:520px;border:0;background:#fff;display:none;margin:22px auto;border-radius:18px;box-shadow:0 10px 28px rgba(46,40,32,.06)}
+    /* Pantalla interna de resultado/búsqueda manual. */
+    #checkinFrame{width:calc(100% - 24px);max-width:720px;height:520px;border:0;background:#fff;display:none;margin:18px auto 24px;border-radius:16px;box-shadow:0 8px 24px rgba(46,40,32,.06)}
 
     @media (max-width:600px){
       header{padding-top:18px}
-      header h2{font-size:23px}
-      .scanner-shell{width:calc(100% - 16px);margin-top:14px}
-      .scanner-card{border-radius:16px}
-      #checkinFrame{width:100%;height:560px;margin:14px 0 0;border-radius:0;box-shadow:none}
+      #reader{margin-top:16px}
+      #checkinFrame{height:560px}
     }
   </style>
 </head>
@@ -69,30 +63,20 @@
   <div id="estado">Ingresa la clave para comenzar</div>
 </header>
 
-<main id="scannerPanel" class="scanner-shell">
-  <section class="scanner-card">
-    <div class="scanner-head">
-      <div class="scanner-kicker">Recepción</div>
-      <h3>Escanear pase</h3>
-      <p>Apunta la cámara al código QR del invitado para validar y registrar su entrada.</p>
-    </div>
+<div id="reader"></div>
 
-    <div id="reader"></div>
-
-    <div id="accionesRecepcion">
-      <div class="manual-divider">o</div>
-      <div class="manual-card">
-        <h4>¿No puedes escanear el código?</h4>
-        <p>Busca al invitado manualmente por nombre o invitación y registra su entrada sin usar el QR.</p>
-        <div class="actions">
-          <button id="btnBusquedaManual" class="btn-primary-soft" type="button" onclick="abrirBusquedaManual()">
-            Buscar invitado manualmente
-          </button>
-        </div>
-      </div>
+<div id="accionesRecepcion">
+  <div class="manual-card">
+    <div class="eyebrow">Alternativa al QR</div>
+    <h4>¿No puedes escanear el código?</h4>
+    <p>Busca al invitado por nombre o invitación y registra su entrada manualmente.</p>
+    <div class="actions">
+      <button id="btnBusquedaManual" type="button" onclick="abrirBusquedaManual()">
+        Buscar invitado manualmente
+      </button>
     </div>
-  </section>
-</main>
+  </div>
+</div>
 
 <iframe id="checkinFrame" allow="camera"></iframe>
 <iframe id="validadorFrame" name="validadorFrame" style="display:none;"></iframe>
@@ -173,19 +157,18 @@ const SESION_STORAGE = "sesionCheckin_" + EVENT_ID;
 const EXPIRA_STORAGE = "sesionCheckinExpira_" + EVENT_ID;
 
 function mostrarAccionesRecepcion(modo) {
-  const panel = document.getElementById("scannerPanel");
-  const acciones = document.getElementById("accionesRecepcion");
+  const contenedor = document.getElementById("accionesRecepcion");
+  if (!contenedor) return;
 
-  if (!panel || !acciones) return;
-
-  if (modo === "scanner") {
-    panel.style.display = "block";
-    acciones.style.display = "block";
-    return;
-  }
-
-  panel.style.display = "none";
-  acciones.style.display = "none";
+  /*
+    La alternativa manual solo aparece mientras el lector QR está activo.
+    Al abrir la búsqueda manual se oculta por completo para no duplicar
+    los controles propios de CheckinManual.
+  */
+  contenedor.style.display =
+    modo === "scanner"
+      ? "block"
+      : "none";
 }
 
 async function abrirBusquedaManual() {
@@ -213,7 +196,6 @@ async function abrirBusquedaManual() {
 
   document.getElementById("reader").style.display = "none";
   document.getElementById("estado").innerText = "Búsqueda manual de invitados";
-  mostrarAccionesRecepcion("oculto");
 
   const urlManual = new URL(BACKEND_URL);
   urlManual.searchParams.set("modo", "checkinmanual");
@@ -224,6 +206,8 @@ async function abrirBusquedaManual() {
   const frame = document.getElementById("checkinFrame");
   frame.src = urlManual.toString();
   frame.style.display = "block";
+
+  mostrarAccionesRecepcion("manual");
 
   frame.scrollIntoView({
     behavior: "smooth",
