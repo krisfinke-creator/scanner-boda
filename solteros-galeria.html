@@ -8,6 +8,7 @@
   >
   <meta name="robots" content="noindex,nofollow">
   <title>Galería de solteros</title>
+  <link rel="icon" href="/favicon.ico?v=v1-1-boda-ready-20260922">
 
   <style>
     html,
@@ -76,6 +77,14 @@
       .trim()
       .toLowerCase();
 
+    const LANG =
+      String(
+        parametros.get("lang") || ""
+      )
+      .trim()
+      .toLowerCase();
+
+
     const TOKEN =
       String(
         parametros.get("token") || ""
@@ -136,6 +145,17 @@
         "token",
         TOKEN
       );
+
+      if (
+        LANG === "es" ||
+        LANG === "en"
+      ) {
+
+        url.searchParams.set(
+          "lang",
+          LANG
+        );
+      }
 
 
       frame.src =
