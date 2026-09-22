@@ -6,22 +6,45 @@
   <title>Check-in</title>
   <script src="https://unpkg.com/html5-qrcode"></script>
   <style>
-    body{font-family:Arial,sans-serif;margin:0;background:#f7f7f7;text-align:center}
-    header{padding:16px;background:white;border-bottom:1px solid #ddd}
-    #reader{width:100%;max-width:520px;margin:20px auto}
-    #estado{margin:15px;font-weight:bold}
-    #checkinFrame{width:100%;height:420px;border:none;background:white;display:none}
-    button{padding:12px 20px;font-size:16px;margin:10px}
-    #claveScanner{width:90%;max-width:350px;box-sizing:border-box;padding:12px;font-size:16px;margin:8px}
-    #accionesRecepcion{display:none;max-width:520px;margin:0 auto 18px;padding:0 12px;box-sizing:border-box}
-    .manual-card{background:white;border:1px solid #e6dfd5;border-radius:16px;box-shadow:0 6px 18px rgba(0,0,0,.05);padding:14px 16px}
-    .manual-card .eyebrow{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#8c857b;margin-bottom:6px;font-weight:700}
-    .manual-card h4{margin:0 0 6px;font-size:18px;color:#403a35}
-    .manual-card p{margin:0;font-size:14px;line-height:1.45;color:#6c665f}
-    .manual-card .actions{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:12px}
-    .manual-card button{margin:0}
-    .btn-primary-soft{background:#efe6db;border:1px solid #d8c7b4;color:#4b4136;border-radius:999px;font-weight:600}
-    .btn-secondary-soft{background:#fff;border:1px solid #d8c7b4;color:#6b5e4e;border-radius:999px;font-weight:600}
+    *{box-sizing:border-box}
+    body{font-family:Arial,sans-serif;margin:0;background:#f6f4f1;color:#302d29;text-align:center}
+    header{padding:22px 16px 18px;background:#fff;border-bottom:1px solid #e6e1da}
+    header h2{margin:0 0 12px;font-size:26px;font-weight:700}
+    #infoEvento h3{margin:6px 0 4px;font-size:20px}
+    #infoEvento div{font-size:14px;color:#6f685f;line-height:1.45}
+    #configScanner{margin-top:14px}
+    #claveScanner{width:90%;max-width:350px;padding:12px 14px;font-size:16px;margin:6px;border:1px solid #d8d2ca;border-radius:10px;background:#fff}
+    button{padding:12px 20px;font-size:16px;border-radius:10px;cursor:pointer}
+    #configScanner button{margin:6px;border:0;background:#3f3a34;color:#fff;font-weight:700}
+    #estado{margin:14px auto 0;max-width:520px;font-size:14px;font-weight:700;color:#5b554d}
+
+    .scanner-shell{display:none;width:min(100% - 24px,560px);margin:22px auto 28px}
+    .scanner-card{background:#fff;border:1px solid #e6e1da;border-radius:20px;box-shadow:0 10px 28px rgba(46,40,32,.06);overflow:hidden}
+    .scanner-head{padding:18px 18px 0;text-align:left}
+    .scanner-kicker{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#9a9187;font-weight:700}
+    .scanner-head h3{margin:5px 0 6px;font-size:20px}
+    .scanner-head p{margin:0;color:#746d64;font-size:14px;line-height:1.45}
+    #reader{width:100%;max-width:520px;margin:14px auto 0;padding:0 12px 12px}
+    #reader video{border-radius:14px}
+
+    #accionesRecepcion{display:none;padding:0 18px 18px}
+    .manual-divider{display:flex;align-items:center;gap:12px;color:#aaa29a;font-size:12px;margin:0 0 14px}
+    .manual-divider:before,.manual-divider:after{content:"";height:1px;flex:1;background:#ece7e1}
+    .manual-card{background:#faf8f5;border:1px solid #ebe4db;border-radius:14px;padding:14px 14px 15px;text-align:left}
+    .manual-card h4{margin:0 0 5px;font-size:16px;color:#403a35}
+    .manual-card p{margin:0;color:#71695f;font-size:13px;line-height:1.45}
+    .manual-card .actions{margin-top:11px}
+    .btn-primary-soft{width:100%;margin:0;background:#efe6db;border:1px solid #d8c7b4;color:#493f34;font-weight:700}
+
+    #checkinFrame{width:min(100% - 24px,720px);height:520px;border:0;background:#fff;display:none;margin:22px auto;border-radius:18px;box-shadow:0 10px 28px rgba(46,40,32,.06)}
+
+    @media (max-width:600px){
+      header{padding-top:18px}
+      header h2{font-size:23px}
+      .scanner-shell{width:calc(100% - 16px);margin-top:14px}
+      .scanner-card{border-radius:16px}
+      #checkinFrame{width:100%;height:560px;margin:14px 0 0;border-radius:0;box-shadow:none}
+    }
   </style>
 </head>
 <body>
@@ -46,30 +69,30 @@
   <div id="estado">Ingresa la clave para comenzar</div>
 </header>
 
-<div id="reader"></div>
+<main id="scannerPanel" class="scanner-shell">
+  <section class="scanner-card">
+    <div class="scanner-head">
+      <div class="scanner-kicker">Recepción</div>
+      <h3>Escanear pase</h3>
+      <p>Apunta la cámara al código QR del invitado para validar y registrar su entrada.</p>
+    </div>
 
-<div id="accionesRecepcion">
-  <div class="manual-card" id="manualCardScanner">
-    <div class="eyebrow">Opción alternativa</div>
-    <h4>¿No puedes escanear el código?</h4>
-    <p>Si el pase no abre, la pantalla está rota o prefieres buscar a la persona por nombre, haz el check-in manual aquí.</p>
-    <div class="actions">
-      <button id="btnBusquedaManual" class="btn-primary-soft" type="button" onclick="abrirBusquedaManual()">
-        Buscar invitado manualmente
-      </button>
+    <div id="reader"></div>
+
+    <div id="accionesRecepcion">
+      <div class="manual-divider">o</div>
+      <div class="manual-card">
+        <h4>¿No puedes escanear el código?</h4>
+        <p>Busca al invitado manualmente por nombre o invitación y registra su entrada sin usar el QR.</p>
+        <div class="actions">
+          <button id="btnBusquedaManual" class="btn-primary-soft" type="button" onclick="abrirBusquedaManual()">
+            Buscar invitado manualmente
+          </button>
+        </div>
+      </div>
     </div>
-  </div>
-  <div class="manual-card" id="manualCardBusqueda" style="display:none;">
-    <div class="eyebrow">Búsqueda manual</div>
-    <h4>Registro sin escanear QR</h4>
-    <p>Busca a la persona por nombre o invitación y, cuando termines, vuelve al lector para seguir escaneando pases.</p>
-    <div class="actions">
-      <button id="btnVolverScanner" class="btn-secondary-soft" type="button" onclick="siguienteInvitado()">
-        Volver al escáner
-      </button>
-    </div>
-  </div>
-</div>
+  </section>
+</main>
 
 <iframe id="checkinFrame" allow="camera"></iframe>
 <iframe id="validadorFrame" name="validadorFrame" style="display:none;"></iframe>
@@ -150,29 +173,19 @@ const SESION_STORAGE = "sesionCheckin_" + EVENT_ID;
 const EXPIRA_STORAGE = "sesionCheckinExpira_" + EVENT_ID;
 
 function mostrarAccionesRecepcion(modo) {
-  const contenedor = document.getElementById("accionesRecepcion");
-  const cardScanner = document.getElementById("manualCardScanner");
-  const cardBusqueda = document.getElementById("manualCardBusqueda");
+  const panel = document.getElementById("scannerPanel");
+  const acciones = document.getElementById("accionesRecepcion");
 
-  if (!contenedor || !cardScanner || !cardBusqueda) return;
+  if (!panel || !acciones) return;
 
   if (modo === "scanner") {
-    contenedor.style.display = "block";
-    cardScanner.style.display = "block";
-    cardBusqueda.style.display = "none";
+    panel.style.display = "block";
+    acciones.style.display = "block";
     return;
   }
 
-  if (modo === "manual") {
-    contenedor.style.display = "block";
-    cardScanner.style.display = "none";
-    cardBusqueda.style.display = "block";
-    return;
-  }
-
-  contenedor.style.display = "none";
-  cardScanner.style.display = "none";
-  cardBusqueda.style.display = "none";
+  panel.style.display = "none";
+  acciones.style.display = "none";
 }
 
 async function abrirBusquedaManual() {
@@ -200,6 +213,7 @@ async function abrirBusquedaManual() {
 
   document.getElementById("reader").style.display = "none";
   document.getElementById("estado").innerText = "Búsqueda manual de invitados";
+  mostrarAccionesRecepcion("oculto");
 
   const urlManual = new URL(BACKEND_URL);
   urlManual.searchParams.set("modo", "checkinmanual");
@@ -210,8 +224,6 @@ async function abrirBusquedaManual() {
   const frame = document.getElementById("checkinFrame");
   frame.src = urlManual.toString();
   frame.style.display = "block";
-
-  mostrarAccionesRecepcion("manual");
 
   frame.scrollIntoView({
     behavior: "smooth",
